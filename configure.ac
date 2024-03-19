@@ -25,15 +25,32 @@ AS_IF([test "x$BOOTWRAPPER_ES" = x32 -a "x$KERNEL_ES" != x32],
 	[AC_MSG_ERROR([a 32-bit boot-wrapper cannot launch a 64-bit kernel])]
 )
 
-# Allow a user to pass --with-kernel-dir
+# Allow a user to pass --enable-dynamic-config
+AC_ARG_ENABLE([dynamic-config],
+        AS_HELP_STRING([--enable-dynamic-config], [enable dynamic configuration of kernel, etc.]),
+        [USE_DYNAMIC_CONFIG=$enableval])
+AM_CONDITIONAL([DYNAMIC_CONFIG], [test "x$USE_DYNAMIC_CONFIG" = "xyes"])
+AS_IF([test "x$USE_DYNAMIC_CONFIG" = "xyes"], [], [USE_DYNAMIC_CONFIG=no])
+
+# Allow a user to pass --enable-adi-platform
+AC_ARG_ENABLE([adi-platform],
+        AS_HELP_STRING([--enable-adi-platform], [enable ADI platform, instead of default Arm platform]),
+        [USE_ADI_PLATFORM=$enableval])
+AM_CONDITIONAL([ADI_PLATFORM], [test "x$USE_ADI_PLATFORM" = "xyes"])
+AS_IF([test "x$USE_ADI_PLATFORM" = "xyes"], [], [USE_ADI_PLATFORM=no])
+
+# Allow a user to pass --with-kernel-dir. Only required if USE_DYNAMIC_CONFIG isn't specified.
+KERN_DIR=""
 AC_ARG_WITH([kernel-dir],
 	AS_HELP_STRING([--with-kernel-dir], [specify the root Linux kernel build directory (required)]),
-	AC_SUBST([KERN_DIR], [$withval]),
-	AC_MSG_ERROR([No kernel directory specified. Use --with-kernel-dir]))
+	AC_SUBST([KERN_DIR], [$withval]))
+AS_IF([test "x$USE_DYNAMIC_CONFIG" = "xyes"], [],
+      [AS_IF([test "x$KERN_DIR" = "x"], [AC_MSG_ERROR([No kernel directory specified. Use --with-kernel-dir])])])
 AS_IF([test "x$KERNEL_ES" = x32],
 	[KERN_IMAGE=$KERN_DIR/arch/arm/boot/zImage],
 	[KERN_IMAGE=$KERN_DIR/arch/arm64/boot/Image])
 KERN_DTB=$KERN_DIR/arch/arm64/boot/dts/arm/fvp-base-revc.dtb
+AS_IF([test "x$USE_DYNAMIC_CONFIG" = "xyes"], [KERN_IMAGE=""], [])
 
 # Allow the user to override the default DTB
 AC_ARG_WITH([dtb],
@@ -52,10 +69,9 @@ AS_IF([test "x$X_IMAGE" == "x"], [],
 AC_SUBST([XEN_IMAGE], [$X_IMAGE])
 AM_CONDITIONAL([XEN], [test "x$X_IMAGE" != "x"])
 
-# Ensure that the user has provided us with a sane kernel dir.
-if ! test -d $KERN_DIR; then
-	AC_MSG_ERROR([Could not find Linux kernel dir: $KERN_DIR.])
-fi
+# Ensure that the user has provided us with a sane kernel dir. Only required if USE_DYNAMIC_CONFIG isn't specified.
+AS_IF([test "x$USE_DYNAMIC_CONFIG" == "xyes"], [],
+     [AS_IF([test ! -d "$KERN_DIR"], [AC_MSG_ERROR([Could not find Linux kernel dir: $KERN_DIR.])])])
 
 AC_MSG_CHECKING([whether DTB file exists])
 if ! test -f $KERN_DTB; then
@@ -68,10 +84,11 @@ fi
 AC_MSG_CHECKING([whether kernel image exists])
 if ! test -f $KERN_IMAGE; then
 	AC_MSG_RESULT([no])
-	AC_MSG_ERROR([Could not find kernel image: $KERN_IMAGE])
 else
 	AC_MSG_RESULT([yes])
 fi
+AS_IF([test "x$USE_DYNAMIC_CONFIG" == "xyes"], [],
+     [AS_IF([test ! -f "$KERN_IMAGE"], [AC_MSG_ERROR([Could not find kernel image: $KERN_IMAGE])])])
 
 AC_SUBST([KERNEL_IMAGE], [$KERN_IMAGE])
 AC_SUBST([KERNEL_DTB], [$KERN_DTB])
@@ -118,6 +135,13 @@ AC_ARG_ENABLE([gicv3],
 AM_CONDITIONAL([GICV3], [test "x$USE_GICV3" = "xyes"])
 AS_IF([test "x$USE_GICV3" = "xyes"], [], [USE_GICV3=no])
 
+# Allow a user to pass --enable-gic600
+AC_ARG_ENABLE([gic600],
+        AS_HELP_STRING([--enable-gic600], [enable GIC600]),
+        [USE_GIC600=$enableval])
+AM_CONDITIONAL([GIC600], [test "x$USE_GIC600" = "xyes"])
+AS_IF([test "x$USE_GIC600" = "xyes"], [], [USE_GIC600=no])
+
 # Ensure that we have all the needed programs
 AC_PROG_CC
 AC_PROG_CPP
@@ -139,7 +163,7 @@ echo ""
 echo "  Boot wrapper configuration"
 echo "  =========================="
 echo ""
-echo "  Linux kernel build dir:            ${KERN_DIR}"
+echo "  Linux kernel build dir:            ${KERN_DIR:-NONE}"
 echo "  Device tree blob:                  ${KERN_DTB}"
 echo "  Linux kernel command line:         ${CMDLINE}"
 echo "  Embedded initrd:                   ${FILESYSTEM:-NONE}"

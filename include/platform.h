@@ -17,4 +17,8 @@ void init_uart(void);
 
 void init_platform(void);
 
+#if ADI_PLATFORM
+void init_platform_secondary(void);
+#endif
+
 #endif /* __PLATFORM_H */

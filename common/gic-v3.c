@@ -28,6 +28,10 @@
 #define GICD_TYPER_ITLineNumber		0x1f
 #define GICD_TYPER_ESPI_range(r)	(((r) >> 27) & 0x1f)
 
+#ifdef GIC600
+#define GICR_PWRR			0x24
+#endif
+
 #define GICR_WAKER			0x14
 
 #define GICR_TYPER			0x8
@@ -58,6 +62,10 @@ void gic_secure_init_primary(void)
 		gicd_base + GICD_CTLR);
 
 	do {
+#ifdef GIC600
+		/* Power up GICR */
+		raw_writel(0x2, gicr_ptr + GICR_PWRR);
+#endif
 		/*
 		 * Wake up redistributor: kick ProcessorSleep and wait for
 		 * ChildrenAsleep to be 0.

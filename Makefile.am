@@ -34,7 +34,12 @@ endif
 PSCI_CPU_OFF	:= 0x84000002
 
 COMMON_SRC	:= common/
-COMMON_OBJ	:= boot.o bakery_lock.o platform.o lib.o init.o
+COMMON_OBJ	:= boot.o bakery_lock.o lib.o init.o
+if ADI_PLATFORM
+COMMON_OBJ     += platform_adi.o
+else
+COMMON_OBJ     += platform.o
+endif
 
 ARCH_OBJ	:= boot.o stack.o utils.o init.o
 
@@ -78,6 +83,14 @@ DEFINES		+= -DGIC_DIST_BASE=$(GIC_DIST_BASE)
 COMMON_OBJ	+= gic.o
 endif
 
+if GIC600
+CFLAGS		+= -DGIC600=1
+endif
+
+if ADI_PLATFORM
+CPPFLAGS	+= -DADI_PLATFORM=1
+endif
+
 if KERNEL_32
 MBOX_OFFSET	:= 0x7ff8
 TEXT_LIMIT	:= 0x3000
@@ -88,9 +101,17 @@ TEXT_LIMIT	:= 0x80000
 KERNEL_OFFSET	:= $(shell perl -I $(SCRIPT_DIR) $(SCRIPT_DIR)/aa64-load-offset.pl $(KERNEL_IMAGE) $(TEXT_LIMIT))
 endif
 
+if DYNAMIC_CONFIG
+LD_SCRIPT	:= model-dynamic-config.lds.S
+CFLAGS		+= -DDYNAMIC_CONFIG=1
+else
 LD_SCRIPT	:= model.lds.S
+endif
 
+if DYNAMIC_CONFIG
+else
 FS_OFFSET	:= 0x10000000
+endif
 FILESYSTEM_START:= $(shell echo $$(($(PHYS_OFFSET) + $(FS_OFFSET))))
 FILESYSTEM_SIZE	:= $(shell stat -Lc %s $(FILESYSTEM) 2>/dev/null || echo 0)
 FILESYSTEM_END	:= $(shell echo $$(($(FILESYSTEM_START) + $(FILESYSTEM_SIZE))))

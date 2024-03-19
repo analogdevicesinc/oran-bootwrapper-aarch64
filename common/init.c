@@ -31,11 +31,15 @@ static void announce_objects(void)
 	print_string("Memory layout:\r\n");
 	announce_object(text, "boot-wrapper");
 	announce_object(mbox, "mbox");
+#ifndef DYNAMIC_CONFIG
 	announce_object(kernel, "kernel");
+#endif
 #ifdef XEN
 	announce_object(xen, "xen");
 #endif
+#ifndef DYNAMIC_CONFIG
 	announce_object(dtb, "dtb");
+#endif
 #ifdef USE_INITRD
 	announce_object(filesystem, "initrd");
 #endif
@@ -54,6 +58,10 @@ void cpu_init_bootwrapper(void)
 		announce_objects();
 		print_string("\r\n");
 		init_platform();
+	} else {
+#if ADI_PLATFORM
+		init_platform_secondary();
+#endif
 	}
 
 	cpu_init_bootmethod(cpu);

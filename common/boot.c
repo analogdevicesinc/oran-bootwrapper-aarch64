@@ -40,7 +40,11 @@ void __noreturn spin(unsigned long *mbox, unsigned long invalid, int is_entry)
 #ifdef KERNEL_32
 		jump_kernel(addr, 0, ~0, (unsigned long)&dtb, 0);
 #else
+#ifdef DYNAMIC_CONFIG
+		jump_kernel(addr, dtb, 0, 0, 0);
+#else
 		jump_kernel(addr, (unsigned long)&dtb, 0, 0, 0);
+#endif
 #endif
 
 	jump_kernel(addr, 0, 0, 0, 0);
@@ -60,7 +64,11 @@ void __noreturn first_spin(unsigned int cpu, unsigned long *mbox,
 			   unsigned long invalid)
 {
 	if (cpu == 0) {
+#ifdef DYNAMIC_CONFIG
+		*mbox = entrypoint;
+#else
 		*mbox = (unsigned long)&entrypoint;
+#endif
 		sevl();
 		spin(mbox, invalid, 1);
 	} else {
