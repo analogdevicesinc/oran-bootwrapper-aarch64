@@ -21,3 +21,8 @@ Makefile.in
 missing
 model.lds
 patches/
+
+# Yocto symlinks
+oe-logs
+oe-workdir
+
